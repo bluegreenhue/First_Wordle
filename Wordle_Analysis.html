@@ -451,21 +451,73 @@ wordProbs &lt;- penteFreq %&gt;%
 <pre class="r"><code>blockedLetters &lt;- c(&quot;t&quot;, &quot;e&quot;, &quot;a&quot;, &quot;r&quot;, &quot;s&quot;)
 wordProbs %&gt;%
   filter(str_detect(Word, &quot;[tears]&quot;, negate = TRUE)) %&gt;%
-  head(n=10)</code></pre>
-<div data-pagedtable="false">
-<script data-pagedtable-source type="application/json">
-{"columns":[{"label":["Word"],"name":[1],"type":["chr"],"align":["left"]},{"label":["logProb"],"name":[2],"type":["dbl"],"align":["right"]}],"data":[{"1":"cloud","2":"-6.705185"},{"1":"could","2":"-6.705185"},{"1":"logic","2":"-6.723610"},{"1":"child","2":"-6.743388"},{"1":"doing","2":"-6.756552"},{"1":"blind","2":"-6.841455"},{"1":"lunch","2":"-6.919665"},{"1":"pound","2":"-6.941436"},{"1":"would","2":"-6.979343"},{"1":"build","2":"-7.029880"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
-  </script>
-</div>
+  head(n=10) %&gt;%
+  kable()</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Word</th>
+<th align="right">logProb</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">cloud</td>
+<td align="right">-6.705185</td>
+</tr>
+<tr class="even">
+<td align="left">could</td>
+<td align="right">-6.705185</td>
+</tr>
+<tr class="odd">
+<td align="left">logic</td>
+<td align="right">-6.723610</td>
+</tr>
+<tr class="even">
+<td align="left">child</td>
+<td align="right">-6.743388</td>
+</tr>
+<tr class="odd">
+<td align="left">doing</td>
+<td align="right">-6.756552</td>
+</tr>
+<tr class="even">
+<td align="left">blind</td>
+<td align="right">-6.841455</td>
+</tr>
+<tr class="odd">
+<td align="left">lunch</td>
+<td align="right">-6.919665</td>
+</tr>
+<tr class="even">
+<td align="left">pound</td>
+<td align="right">-6.941436</td>
+</tr>
+<tr class="odd">
+<td align="left">would</td>
+<td align="right">-6.979343</td>
+</tr>
+<tr class="even">
+<td align="left">build</td>
+<td align="right">-7.029880</td>
+</tr>
+</tbody>
+</table>
 <p>And what if that doesn’t work? What is the third word to try?</p>
 <pre class="r"><code>wordProbs %&gt;%
   filter(str_detect(Word, &quot;[tearscloud]&quot;, negate = TRUE)) %&gt;%
-  head(n=10)</code></pre>
-<div data-pagedtable="false">
-<script data-pagedtable-source type="application/json">
-{"columns":[{"label":["Word"],"name":[1],"type":["chr"],"align":["left"]},{"label":["logProb"],"name":[2],"type":["dbl"],"align":["right"]}],"data":[],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
-  </script>
-</div>
+  head(n=10) %&gt;%
+  kable()</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Word</th>
+<th align="right">logProb</th>
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table>
 <p>Hmmm. Looks like there probably won’t be a wordle for which “tears” followed by “cloud” won’t produce at least a single letter hit.</p>
 
 
