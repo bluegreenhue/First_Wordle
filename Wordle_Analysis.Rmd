@@ -1,0 +1,137 @@
+---
+title: "Wordle Analysis"
+output:
+  html_document:
+    df_print: paged
+---
+
+Looking at a table of letter frequencies for the English language, it seems like "TEARS" is a pretty good first word to use in Wordle.  But is there something better?
+
+```{r}
+library(tidyverse)
+library(qdapDictionaries)
+library(knitr)
+```
+
+First, make a tibble of all 5 letter words in our "qdapDictionaries" dictionary:
+
+```{r}
+data(DICTIONARY)
+words <- tibble(Word = DICTIONARY$word) %>%
+  filter(nchar(Word) == 5) %>%
+  mutate(chars = str_split(Word, "")) %>%
+  separate(Word, paste("C", 0:5, sep=""),"", remove=FALSE) %>%
+  select(- C0)
+words %>% head()
+```
+
+This dictionary has `r nrow(words)` words.
+
+Download a word frequency list (which just includes common words):
+
+```{r}
+wordFreq <- read_delim("https://ucrel.lancs.ac.uk/bncfreq/lists/1_2_all_freq.txt", delim="\t")
+```
+
+```{r}
+library(stringi)
+penteFreq <- wordFreq %>%
+  select(Word, Freq) %>%
+  mutate(Word = stri_enc_toutf8(Word, validate = TRUE)) %>% # fix weird encoding issue
+  mutate(Word = str_remove_all(Word, "\\*")) %>% # no wildcards
+  mutate(Word = str_remove_all(Word, " ")) %>% # no spaces
+  mutate(Word = str_remove_all(Word, "[0-9]")) %>% # no numbers
+  filter(str_detect(Word, "[A-Z]", negate = TRUE)) %>% # filter capitalized words
+  mutate(wordLength = str_length(Word)) %>%
+  filter(wordLength == 5)
+```
+
+This dictionary has `r nrow(penteFreq)` words.
+
+First, try calculating letter probabilities by position (maybe more likely to get green squares?)
+
+```{r}
+probTableByPosition <- penteFreq %>%
+  separate(Word, paste("C", 0:5, sep=""),"", remove=FALSE) %>%
+  select(- C0) %>%
+  select(starts_with("C")) %>%
+  pivot_longer(starts_with("C") ,names_to = "Position", values_to = "Character") %>%
+  count(Position, Character) %>%
+  group_by(Position) %>%
+  mutate(logProb = log10(n / sum(n)))
+wordProbsByPosition <- penteFreq %>%
+  separate(Word, paste("C", 0:5, sep=""),"", remove=FALSE) %>%
+  select(- C0) %>%
+  select(Word, starts_with("C")) %>%
+  pivot_longer(starts_with("C") ,names_to = "Position", values_to = "Character") %>%
+  inner_join(probTableByPosition %>% select(Position, Character, logProb)) %>%
+  group_by(Word) %>%
+  summarise(logProb = sum(logProb)) %>%
+  filter(map_int(Word, ~ length(unique(str_split(.x, "")[[1]]))) == 5) %>% # no duplicate letters
+  arrange(desc(logProb))
+wordProbsByPosition %>%
+  head(n=10) %>%
+  kable()
+```
+
+On second thought, modeling by position is probably suboptimal.  Redo the analysis but with just letter frequency.
+
+```{r}
+probTable <- penteFreq %>%
+  separate(Word, paste("C", 0:5, sep=""),"", remove=FALSE) %>%
+  select(- C0) %>%
+  select(starts_with("C")) %>%
+  pivot_longer(starts_with("C") ,names_to = "Position", values_to = "Character") %>%
+  count(Character) %>%
+  mutate(logProb = log10(n / sum(n))) %>%
+  arrange(desc(logProb))
+wordProbs <- penteFreq %>%
+  separate(Word, paste("C", 0:5, sep=""),"", remove=FALSE) %>%
+  select(- C0) %>%
+  select(Word, starts_with("C")) %>%
+  pivot_longer(starts_with("C") ,names_to = "Position", values_to = "Character") %>%
+  inner_join(probTable %>% select(Character, logProb)) %>%
+  group_by(Word) %>%
+  summarise(logProb = sum(logProb)) %>%
+  filter(map_int(Word, ~ length(unique(str_split(.x, "")[[1]]))) == 5) %>% # no duplicate letters
+  arrange(desc(logProb))
+wordProbs %>%
+  head(n=10) %>%
+  kable()
+```
+
+Hey, "tears" actually looks pretty optimal!  What if we apply this probability model to the longer list of five letter words that includes uncommon ones.  Maybe there is a word that checks a lot of boxes for common letters even though it woudln't be selected for a puzzle.
+
+```{r}
+largeWordProbs <- words %>%
+  select(- chars) %>%
+  pivot_longer(starts_with("C") ,names_to = "Position", values_to = "Character") %>%
+  inner_join(probTable %>% select(Character, logProb)) %>%
+  group_by(Word) %>%
+  summarise(logProb = sum(logProb)) %>%
+  filter(map_int(Word, ~ length(unique(str_split(.x, "")[[1]]))) == 5) %>% # no duplicate letters
+  arrange(desc(logProb))
+largeWordProbs %>%
+  head(n=10) %>%
+  kable()
+```
+
+So, it seems like TEARS, STARE, or ASTER would be optimal starting points.  So what is the word to pick in case none of these letters are in the word of the day?
+
+```{r}
+blockedLetters <- c("t", "e", "a", "r", "s")
+wordProbs %>%
+  filter(str_detect(Word, "[tears]", negate = TRUE)) %>%
+  head(n=10)
+```
+
+And what if that doesn't work?  What is the third word to try?
+
+```{r}
+wordProbs %>%
+  filter(str_detect(Word, "[tearscloud]", negate = TRUE)) %>%
+  head(n=10)
+```
+
+Hmmm.  Looks like there probably won't be a wordle for which "tears" followed by "cloud" won't produce at least a single letter hit.
+
